@@ -21,11 +21,10 @@ entity AWG_Unit is
 		;i_StaGP:in std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
 		;i_resetGP:in std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
 		;i_fGP:in std_logic_vector(g_lines*(g_AWGQD+g_RL*g_AWGQR)-1 downto 0)
-		;i_WfGP:in std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
-		;i_resetfGP:in std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
 		;o_finishGP:out std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
 		--Inputs and outputs for the sine and cosine signal generator
-		;i_fCS:in std_logic_vector(g_bits*(g_AWGQD + g_RL*g_AWGQR)-1 downto 0)
+		;i_alpha:in std_logic_vector(g_bits*(g_AWGQD + g_RL*g_AWGQR)-1 downto 0)
+		;i_beta:in std_logic_vector(g_bits*(g_AWGQD + g_RL*g_AWGQR)-1 downto 0)
 		;i_resetCS:in std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
 		--Inputs and outputs for the custom pulse
 		;i_resetCP:in std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
@@ -36,7 +35,7 @@ entity AWG_Unit is
 		--Extra inputs and outputs that are used by this circuit
 		;i_CPulse:in std_logic_vector(g_AWGQD+g_RL*g_AWGQR-1 downto 0)
 		;i_gain:in std_logic_vector(g_bits*(g_AWGQD+g_RL*g_AWGQR)-1 downto 0)
-		;i_cDAC:in std_logic_vector(g_DACs*(integer(ceil(LOG2(real(3*g_AWGQD+g_RL)))))-1 downto 0)
+		;i_cDAC:in std_logic_vector(g_DACs*(integer(ceil(LOG2(real(3*g_AWGQD+2*g_RL)))))-1 downto 0)
 		;o_signals:out std_logic_vector(g_bits*g_DACs-1 downto 0)
 		);
 
@@ -58,11 +57,10 @@ Architecture rtl of AWG_Unit is
 			;i_StaGP:in std_logic--Added
 			;i_resetGP:in std_logic--Added
 			;i_fGP:in std_logic_vector(g_lines-1 downto 0)--Added
-			;i_WfGP:in std_logic--Added
-			;i_resetfGP:in std_logic--Added
 			;o_finishGP:out std_logic--Added
 			--inputs and outputs for the sine and cosine signal generator
-			;i_fCS:in std_logic_vector(g_bits-1 downto 0)--Added
+			;i_alpha:in std_logic_vector(g_bits-1 downto 0)--Added
+			;i_beta:in std_logic_vector(g_bits-1 downto 0)
 			;i_resetCS:in std_logic--Added
 			--inputs and outputs for the custom pulse
 			;i_resetCP:in std_logic--Added
@@ -111,7 +109,8 @@ Architecture rtl of AWG_Unit is
 	type t_Mux is array (0 to g_RL*g_AWGQR-1) of std_logic_vector(g_bits-1 downto 0);
 	
 	signal s_fGP: t_fGP;
-	signal s_fCS: t_fCS_DataCP_gain;
+	signal s_alpha: t_fCS_DataCP_gain;
+	signal s_beta: t_fCS_DataCP_gain;
 	signal s_DataCP: t_fCS_DataCP_gain;
 	signal s_Addr: t_Addr;
 	signal s_gain: t_fCS_DataCP_gain;
@@ -128,7 +127,8 @@ begin
 	--Hago algunas asociaciones entre entradas, salidas y señales
 	A: for i in 0 to g_AWGQD+g_RL*g_AWGQR-1 generate
 		s_fGP(i) <= i_fGP((i+1)*g_lines-1 downto i*g_lines);
-		s_fCS(i) <= i_fCS((i+1)*g_bits-1 downto i*g_bits);
+		s_alpha(i) <= i_alpha((i+1)*g_bits-1 downto i*g_bits);
+		s_beta(i) <= i_beta((i+1)*g_bits-1 downto i*g_bits);
 		s_DataCP(i) <= i_DataCP((i+1)*g_bits-1 downto i*g_bits);
 		o_Addr((i+1)*g_addr-1 downto i*g_addr) <= s_Addr(i);
 		s_gain(i) <= i_gain((i+1)*g_bits-1 downto i*g_bits);
@@ -137,22 +137,22 @@ begin
 	--Instancio varias veces el componente de Qubit_Drive
 	
 	D: for i in 0 to g_AWGQD+g_RL*g_AWGQR-1 generate
-		AWG:	Qubit_drive	port map (i_Clk, i_StaGP(i), i_resetGP(i), s_fGP(i), i_WfGP(i), i_resetfGP(i), o_finishGP(i)
-											,s_fCS(i), i_resetCS(i), i_resetCP(i), i_staCP(i), s_DataCP(i), s_Addr(i), o_finishCP(i)
+		AWG:	Qubit_drive	port map (i_Clk, i_StaGP(i), i_resetGP(i), s_fGP(i), o_finishGP(i)
+											,s_alpha(i), s_beta(i), i_resetCS(i), i_resetCP(i), i_staCP(i), s_DataCP(i), s_Addr(i), o_finishCP(i)
 											,i_CPulse(i), s_gain(i), s_signals(i)(0), s_signals(i)(1), s_signals(i)(2));
 	end generate;
 	--Sumo las señales del Readout Line
 	
 	F: for i in 0 to g_RL-1 generate
 		process(s_signals)
-			variable v_suma0:unsigned(g_bits-1 downto 0);
-			variable v_suma1:unsigned(g_bits-1 downto 0);
+			variable v_suma0:signed(g_bits-1 downto 0);
+			variable v_suma1:signed(g_bits-1 downto 0);
 		begin
 		v_suma0:=(others=>'0');
 		v_suma1:=(others=>'0');
 			for j in 0 to g_AWGQR-1 loop
-				v_suma0 := v_suma0 + unsigned(s_signals(g_AWGQD+i*g_AWGQR+j)(1));
-				v_suma1 := v_suma1 + unsigned(s_signals(g_AWGQD+i*g_AWGQR+j)(2));
+				v_suma0 := v_suma0 + signed(s_signals(g_AWGQD+i*g_AWGQR+j)(1));
+				v_suma1 := v_suma1 + signed(s_signals(g_AWGQD+i*g_AWGQR+j)(2));
 			end loop;
 			s_signalIn(3*g_AWGQD+2*i) <= std_logic_vector(v_suma0);
 			s_signalIn(3*g_AWGQD+2*i+1) <= std_logic_vector(v_suma1);

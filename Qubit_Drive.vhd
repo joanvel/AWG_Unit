@@ -15,11 +15,10 @@ entity Qubit_drive is
 		;i_StaGP:in std_logic
 		;i_resetGP:in std_logic
 		;i_fGP:in std_logic_vector(g_lines-1 downto 0)
-		;i_WfGP:in std_logic
-		;i_resetfGP:in std_logic
 		;o_finishGP:out std_logic
 		--inputs and outputs for the sine and cosine signal generator
-		;i_fCS:in std_logic_vector(g_bits-1 downto 0)
+		;i_alpha:in std_logic_vector(g_bits-1 downto 0)
+		;i_beta:in std_logic_vector(g_bits-1 downto 0)
 		;i_resetCS:in std_logic
 		--inputs and outputs for the custom pulse
 		;i_resetCP:in std_logic
@@ -48,19 +47,18 @@ Architecture rtl of Qubit_drive is
 			;i_sta:in std_logic
 			;i_reset:in std_logic
 			;i_Data:in std_logic_vector(g_lines-1 downto 0)
-			;i_WData:in std_logic
-			;i_ResetData:in std_logic
 			;o_finish:out std_logic
 			;o_Data:out std_logic_vector(g_bits-1 downto 0)
 			);
 	end component;
 	
-	component DDS_sine_and_cosine is
+	component DDSSC is
 		generic
 				(g_bits:integer:=g_bits);
 		port
 			(i_Clk:in std_logic
-			;i_fctrl:in std_logic_vector(g_bits-1 downto 0)
+			;i_Ctrl0:in std_logic_vector(g_bits-1 downto 0)
+			;i_Ctrl1:in std_logic_vector(g_bits-1 downto 0)
 			;i_reset:in std_logic
 			;o_sin:out std_logic_vector(g_bits-1 downto 0)
 			;o_cos:out std_logic_vector(g_bits-1 downto 0)
@@ -94,8 +92,8 @@ Architecture rtl of Qubit_drive is
 	signal s_signalO:std_logic_vector(2*g_bits-1 downto 0);
 begin
 	
-	GP:	GaussianP	port map (i_Clk, i_staGP, i_resetGP, i_fGP, i_WfGP, i_resetfGP, o_finishGP, s_DataGP);
-	DDSC:	DDS_sine_and_cosine	port map (i_Clk, i_fCS, i_resetCS, s_sin, s_cos);
+	GP:	GaussianP	port map (i_Clk, i_staGP, i_resetGP, i_fGP, o_finishGP, s_DataGP);
+	DDSC:	DDSSC	port map (i_Clk, i_alpha, i_beta, i_resetCS, s_sin, s_cos);
 	CP:	Custom_Pulse	port map (i_Clk, i_resetCP, i_staCP, i_DataCP, s_DataCP, o_Addr, o_finishCP);
 	
 	s_Temp0 <= s_DataGP when i_C = '0' else

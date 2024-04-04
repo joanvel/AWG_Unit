@@ -112,5 +112,5 @@ Architecture RTL of LUT is
 									,32707,32711,32715,32719,32723,32726,32730,32733,32736,32739,32742,32745,32747,32749,32752,32754
 									,32756,32757,32759,32760,32762,32763,32764,32765,32765,32766,32766,32766,32767);
 begin
-	o_Data <= std_logic_vector(to_unsigned(values(to_integer(unsigned(i_Data))),g_bits));
+	o_Data <= std_logic_vector(to_signed(values(to_integer(unsigned(i_Data))),g_bits));
 end RTL;
